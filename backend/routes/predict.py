@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from services.predictor import make_dummy_prediction
 
 predict_bp = Blueprint("predict", __name__)
 
@@ -26,9 +27,9 @@ def predict():
 
     try:
         # Convert inputs to correct data types
-        airline = str(data["airline"])
-        origin = str(data["origin"])
-        destination = str(data["destination"])
+        airline = str(data["airline"]).strip()
+        origin = str(data["origin"]).strip()
+        destination = str(data["destination"]).strip()
         dep_hour = int(data["dep_hour"])
         day_of_week = int(data["day_of_week"])
         month = int(data["month"])
@@ -36,6 +37,13 @@ def predict():
         return jsonify({
             "status": "error",
             "message": "Invalid data types provided"
+        }), 400
+
+    # Validate text fields
+    if not airline or not origin or not destination:
+        return jsonify({
+            "status": "error",
+            "message": "airline, origin, and destination cannot be empty"
         }), 400
 
     # Validate value ranges
@@ -57,19 +65,26 @@ def predict():
             "message": "month must be between 1 and 12"
         }), 400
 
-    # Temporary prediction logic (to be replaced with trained model)
-    if dep_hour >= 15:
-        prediction = 1
-        prediction_label = "Delay Likely"
-        delay_probability = 0.72
-    else:
-        prediction = 0
-        prediction_label = "On Time Likely"
-        delay_probability = 0.28
+    prediction, prediction_label, delay_probability = make_dummy_prediction({
+        "airline": airline,
+        "origin": origin,
+        "destination": destination,
+        "dep_hour": dep_hour,
+        "day_of_week": day_of_week,
+        "month": month
+    })
 
     # Return structured JSON response
     return jsonify({
         "status": "success",
+        "input": {
+            "airline": airline,
+            "origin": origin,
+            "destination": destination,
+            "dep_hour": dep_hour,
+            "day_of_week": day_of_week,
+            "month": month
+        },
         "prediction": prediction,
         "prediction_label": prediction_label,
         "delay_probability": delay_probability

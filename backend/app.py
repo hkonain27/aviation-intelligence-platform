@@ -1,9 +1,14 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from routes.health import health_bp
+from routes.predict import predict_bp
 
 def create_app():
     app = Flask(__name__)
+    #Add CORS
+    CORS(app)
     app.register_blueprint(health_bp)
+    app.register_blueprint(predict_bp)
     return app
 
 app = create_app()
@@ -59,4 +64,4 @@ def predict():
     })
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5001)
