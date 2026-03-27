@@ -131,6 +131,5 @@ def get_dashboard_data():
         "mockFlights": mock_flights
     })
 
-
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
