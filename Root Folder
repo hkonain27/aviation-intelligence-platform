@@ -1,0 +1,23 @@
+FlightTrackerApp/
+│
+├─ App.js
+├─ package.json
+├─ app.json
+├─ babel.config.js
+├─ .gitignore
+│
+├─ styles/
+│   └─ styles.js
+│
+├─ components/
+│   ├─ FlightCard.js
+│   └─ ThemeToggle.js
+│
+├─ utils/
+│   └─ api.js
+│
+├─ assets/
+│   ├─ logo.png
+│   └─ airplane.png
+│
+└─ README.md
