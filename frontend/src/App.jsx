@@ -127,6 +127,14 @@ export default function App() {
     setPredicting(true);
     setPredictionResult(null);
     setPredictionError(null);
+
+    const { airline, origin, destination, dep_hour, day_of_week, distance } = form;
+    if (!airline || !origin || !destination || dep_hour === "" || day_of_week === "" || distance === "") {
+      setPredictionError("Please fill in all fields before running a prediction");
+      setPredicting(false);
+      return;
+    }
+
     try {
       const response = await fetch("http://localhost:5001/predict", {
         method: "POST",

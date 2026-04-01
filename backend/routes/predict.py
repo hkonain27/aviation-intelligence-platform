@@ -26,9 +26,6 @@ def predict():
         distance = int(data["distance"])
     except (ValueError, TypeError):
         return jsonify({"status": "error", "message": "Invalid data types provided"}), 400
-
-    if not airline or not origin or not destination:
-        return jsonify({"status": "error", "message": "airline, origin, and destination cannot be empty"}), 400
     if dep_hour < 0 or dep_hour > 23:
         return jsonify({"status": "error", "message": "dep_hour must be between 0 and 23"}), 400
     if day_of_week < 1 or day_of_week > 7:
