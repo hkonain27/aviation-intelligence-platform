@@ -1,4 +1,5 @@
 venv/
+.venv/
 __pycache__/
 *.pyc
 .env
@@ -6,3 +7,4 @@ __pycache__/
 data/raw/*.csv
 *.pkl
 data/processed/
+backend/predictions.db
