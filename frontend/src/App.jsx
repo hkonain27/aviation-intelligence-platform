@@ -37,17 +37,8 @@ import {
   Activity,
   Filter,
   RefreshCcw,
-  Clock,
 } from "lucide-react";
 import { motion } from "framer-motion";
-
-const IconMapping = {
-  Plane: Plane,
-  Clock3: Clock3,
-  CloudRain: CloudRain,
-  TrendingUp: TrendingUp,
-};
-
 
 const statusStyles = {
   "Low Risk": "bg-green-100 text-green-700 border-green-200",
@@ -58,8 +49,16 @@ const statusStyles = {
 
 const pieColors = ["#1d4ed8", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"];
 
+const EMPTY_FORM = {
+  airline: "",
+  origin: "",
+  destination: "",
+  dep_hour: "",
+  day_of_week: "",
+  distance: "",
+};
+
 export default function App() {
-  //
   const [data, setData] = useState({
     summaryCards: [],
     monthlyDelayData: [],
@@ -69,32 +68,31 @@ export default function App() {
     mockFlights: [],
   });
   const [loading, setLoading] = useState(true);
-
   const [airportFilter, setAirportFilter] = useState("all");
   const [weatherFilter, setWeatherFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState("7days");
 
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [predicting, setPredicting] = useState(false);
+  const [predictionResult, setPredictionResult] = useState(null);
+  const [predictionError, setPredictionError] = useState(null);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await fetch("http://localhost:5001/api/dashboard-data");
-        if(!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        const data = await response.json();
-        setData(data);
-        setLoading(false);
+        if (!response.ok) throw new Error("Network response was not ok");
+        const json = await response.json();
+        setData(json);
       } catch (error) {
         console.error("Error fetching data:", error);
+      } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
-  //
-
 
   const filteredFlights = useMemo(() => {
     return data.mockFlights.filter((flight) => {
@@ -108,16 +106,47 @@ export default function App() {
     });
   }, [airportFilter, weatherFilter, search, data.mockFlights]);
 
-  if(loading) {
+  const handleFormChange = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handlePredict = async () => {
+    setPredicting(true);
+    setPredictionResult(null);
+    setPredictionError(null);
+    try {
+      const response = await fetch("http://localhost:5001/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          airline: form.airline,
+          origin: form.origin,
+          destination: form.destination,
+          dep_hour: parseInt(form.dep_hour),
+          day_of_week: parseInt(form.day_of_week),
+          distance: parseInt(form.distance),
+        }),
+      });
+      const json = await response.json();
+      if (!response.ok || json.status === "error") {
+        setPredictionError(json.message || "Prediction failed");
+      } else {
+        setPredictionResult(json);
+      }
+    } catch (err) {
+      setPredictionError("Could not connect to backend");
+    } finally {
+      setPredicting(false);
+    }
+  };
+
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <RefreshCcw className="animate-spin" />
       </div>
     );
   }
-
-  //
-
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -136,29 +165,20 @@ export default function App() {
             </div>
             <h1 className="text-3xl font-bold tracking-tight md:text-4xl">Flight Delay Prediction Dashboard</h1>
             <p className="mt-2 max-w-3xl text-sm text-slate-600 md:text-base">
-              Monitor historic delay patterns, compare weather impact, and preview predictive analytics while the backend is still in progress.
+              Monitor historic delay patterns, compare weather impact, and run real-time delay predictions.
             </p>
           </div>
-
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="outline" className="rounded-2xl">
+            <Button variant="outline" className="rounded-2xl" onClick={() => window.location.reload()}>
               <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
             </Button>
-            <Button className="rounded-2xl">Run Prediction</Button>
           </div>
         </motion.div>
 
-        <Alert className="mb-6 rounded-2xl border-blue-200 bg-blue-50">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Frontend mode</AlertTitle>
-          <AlertDescription>
-            This version uses mock data and is structured so you can swap in live API responses later with minimal changes.
-          </AlertDescription>
-        </Alert>
-
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {data.summaryCards.map((card, index) => {
-            const Icon = card.icon;
+            const iconMap = { Plane, Clock3, CloudRain, TrendingUp };
+            const Icon = iconMap[card.icon] || Plane;
             return (
               <motion.div
                 key={card.title}
@@ -264,15 +284,15 @@ export default function App() {
                 <CardContent className="space-y-5">
                   <div className="rounded-2xl bg-slate-50 p-4">
                     <div className="mb-2 flex items-center gap-2 text-sm font-medium"><MapPin className="h-4 w-4" /> Highest current risk</div>
-                    <p className="text-sm text-slate-600">ORD and ATL show the strongest sustained delay risk in this mock analysis.</p>
+                    <p className="text-sm text-slate-600">ORD and ATL show the strongest sustained delay risk in this analysis.</p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-4">
                     <div className="mb-2 flex items-center gap-2 text-sm font-medium"><CloudRain className="h-4 w-4" /> Weather signal</div>
-                    <p className="text-sm text-slate-600">Rain, storms, and snow are the strongest predictive features in this frontend placeholder.</p>
+                    <p className="text-sm text-slate-600">Rain, storms, and snow are the strongest predictive features.</p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-4">
                     <div className="mb-2 flex items-center gap-2 text-sm font-medium"><Activity className="h-4 w-4" /> Model confidence</div>
-                    <p className="text-sm text-slate-600">Predictions above 85% confidence can be highlighted for operations and passenger alerts.</p>
+                    <p className="text-sm text-slate-600">Predictions above 85% confidence are highlighted for operations and passenger alerts.</p>
                   </div>
                 </CardContent>
               </Card>
@@ -284,7 +304,7 @@ export default function App() {
               <Card className="rounded-2xl border-none shadow-sm xl:col-span-8">
                 <CardHeader>
                   <CardTitle>7-Day Delay Forecast</CardTitle>
-                  <CardDescription>Prototype visualization for your predictive endpoint</CardDescription>
+                  <CardDescription>Actual vs predicted delay trends</CardDescription>
                 </CardHeader>
                 <CardContent className="h-[320px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -303,29 +323,39 @@ export default function App() {
 
               <Card className="rounded-2xl border-none shadow-sm xl:col-span-4">
                 <CardHeader>
-                  <CardTitle>Model Status</CardTitle>
-                  <CardDescription>Placeholder panel until backend model serving is ready</CardDescription>
+                  <CardTitle>Run a Prediction</CardTitle>
+                  <CardDescription>Enter flight details to get a real-time delay prediction</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-5">
-                  <div>
-                    <div className="mb-2 flex items-center justify-between text-sm">
-                      <span>Data pipeline readiness</span>
-                      <span>74%</span>
+                <CardContent className="space-y-3">
+                  <Input placeholder="Airline (e.g. UA)" value={form.airline} onChange={(e) => handleFormChange("airline", e.target.value)} className="rounded-xl" />
+                  <Input placeholder="Origin (e.g. JFK)" value={form.origin} onChange={(e) => handleFormChange("origin", e.target.value)} className="rounded-xl" />
+                  <Input placeholder="Destination (e.g. LAX)" value={form.destination} onChange={(e) => handleFormChange("destination", e.target.value)} className="rounded-xl" />
+                  <Input placeholder="Departure Hour (0–23)" type="number" value={form.dep_hour} onChange={(e) => handleFormChange("dep_hour", e.target.value)} className="rounded-xl" />
+                  <Input placeholder="Day of Week (1=Mon, 7=Sun)" type="number" value={form.day_of_week} onChange={(e) => handleFormChange("day_of_week", e.target.value)} className="rounded-xl" />
+                  <Input placeholder="Distance (miles)" type="number" value={form.distance} onChange={(e) => handleFormChange("distance", e.target.value)} className="rounded-xl" />
+
+                  <Button className="w-full rounded-xl" onClick={handlePredict} disabled={predicting}>
+                    {predicting ? "Predicting..." : "Run Prediction"}
+                  </Button>
+
+                  {predictionError && (
+                    <Alert className="rounded-xl border-red-200 bg-red-50">
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                      <AlertDescription className="text-red-700">{predictionError}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {predictionResult && (
+                    <div className={`rounded-xl p-4 ${predictionResult.prediction === 1 ? "bg-red-50 border border-red-200" : "bg-green-50 border border-green-200"}`}>
+                      <p className={`text-lg font-semibold ${predictionResult.prediction === 1 ? "text-red-700" : "text-green-700"}`}>
+                        {predictionResult.prediction_label}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Delay probability: <span className="font-medium">{(predictionResult.delay_probability * 100).toFixed(1)}%</span>
+                      </p>
+                      <Progress value={predictionResult.delay_probability * 100} className="mt-2 h-2" />
                     </div>
-                    <Progress value={74} className="h-3" />
-                  </div>
-                  <div>
-                    <div className="mb-2 flex items-center justify-between text-sm">
-                      <span>Prediction service readiness</span>
-                      <span>48%</span>
-                    </div>
-                    <Progress value={48} className="h-3" />
-                  </div>
-                  <Separator />
-                  <div className="space-y-3 text-sm text-slate-600">
-                    <p><strong>Next hookup:</strong> connect this panel to a <code>/health</code> or <code>/model/status</code> endpoint.</p>
-                    <p><strong>Nice touch:</strong> show model version, last retrain date, and active feature set once your backend is live.</p>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -339,22 +369,13 @@ export default function App() {
                     <CardTitle>Flight Risk Table</CardTitle>
                     <CardDescription>Search and filter a flight-level prediction view</CardDescription>
                   </div>
-
                   <div className="grid w-full gap-3 md:grid-cols-2 xl:grid-cols-4 lg:w-auto">
                     <div className="relative min-w-[220px]">
                       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                      <Input
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search flight, route, airline"
-                        className="rounded-2xl pl-10"
-                      />
+                      <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search flight, route, airline" className="rounded-2xl pl-10" />
                     </div>
-
                     <Select value={airportFilter} onValueChange={setAirportFilter}>
-                      <SelectTrigger className="rounded-2xl">
-                        <SelectValue placeholder="Airport" />
-                      </SelectTrigger>
+                      <SelectTrigger className="rounded-2xl"><SelectValue placeholder="Airport" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Airports</SelectItem>
                         <SelectItem value="CLT">CLT</SelectItem>
@@ -364,11 +385,8 @@ export default function App() {
                         <SelectItem value="JFK">JFK</SelectItem>
                       </SelectContent>
                     </Select>
-
                     <Select value={weatherFilter} onValueChange={setWeatherFilter}>
-                      <SelectTrigger className="rounded-2xl">
-                        <SelectValue placeholder="Weather" />
-                      </SelectTrigger>
+                      <SelectTrigger className="rounded-2xl"><SelectValue placeholder="Weather" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Weather</SelectItem>
                         <SelectItem value="Rain">Rain</SelectItem>
@@ -378,7 +396,6 @@ export default function App() {
                         <SelectItem value="Snow">Snow</SelectItem>
                       </SelectContent>
                     </Select>
-
                     <Select value={dateRange} onValueChange={setDateRange}>
                       <SelectTrigger className="rounded-2xl">
                         <CalendarRange className="mr-2 h-4 w-4" />
@@ -393,12 +410,10 @@ export default function App() {
                   </div>
                 </div>
               </CardHeader>
-
               <CardContent>
                 <div className="mb-4 flex items-center gap-2 text-sm text-slate-500">
                   <Filter className="h-4 w-4" /> Showing {filteredFlights.length} flights for {dateRange}
                 </div>
-
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[900px] border-separate border-spacing-y-3">
                     <thead>

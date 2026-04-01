@@ -9,7 +9,6 @@ def make_prediction(data):
         "destination": data["destination"],
         "dep_hour": data["dep_hour"],
         "day_of_week": data["day_of_week"],
-        "month": data["month"],
         "distance": data["distance"]
     }])
 
